@@ -17,10 +17,19 @@ class User extends Authenticatable
      *
      * @var list<string>
      */
+    protected $table = 't_user'; // Nom de ta table
+    protected $primaryKey = 'id_user'; // Clé primaire
+    public $timestamps = false; // Tu gères déjà les dates toi-même
+
+
     protected $fillable = [
-        'name',
+        'nom',
         'email',
-        'password',
+        'mot_de_passe',
+        'statut_compte',
+        'date_creation',
+        'date_derniere_modif',
+        'id_role',
     ];
 
     /**
@@ -29,9 +38,14 @@ class User extends Authenticatable
      * @var list<string>
      */
     protected $hidden = [
-        'password',
-        'remember_token',
+        'mot_de_passe',
     ];
+
+    // Indiquer à Laravel d'utiliser "mot_de_passe" comme champ password
+    public function getAuthPassword()
+    {
+        return $this->mot_de_passe;
+    }
 
     /**
      * Get the attributes that should be cast.
