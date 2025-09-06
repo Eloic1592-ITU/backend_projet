@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\PhotoService;
 use Illuminate\Http\Request;
 use App\Models\TSiteTouristique;
 use App\Models\TPhoto;
@@ -38,18 +39,27 @@ class TouristAttractionController extends Controller
                 'description' => 'required|string',
                 'id_user_modif' => 'required|integer',
                 'difficulte_acces' => 'required|in:1,2,3', //accepte uniquement 1,2,3
-                'photos' => 'array', // tableau de photos [{nom_photo, image_encode}]
+                'photos' => ['required', 'array', 'min:1', 'max:5'],
+                'photo.*' => 'image|mimes:jpeg,png,jpg|max:15048',
                 'commodites' => 'array', // tableau d'IDs
                 'tarif_site_touristique' => 'required|numeric|min:0',
             ]);
 
             // 1. Sauvegarder les photos
             $photoIds = [];
-            if (!empty($request->photos)) {
+            if (
+                !empty($request->photos) && is_array($request->photos)
+                && count($request->photos)
+            ) {
                 foreach ($request->photos as $photo) {
-                    $newPhoto = TPhoto::create([
-                        'nom_photo' => $photo['nom_photo'],
-                        'image_encode' => $photo['image_encode'],
+                    if (!$photo instanceof \Illuminate\Http\UploadedFile) {
+                        continue;
+                    }
+
+                    $imageData = PhotoService::handleImageToInsert($photo);
+                    $newPhoto = TPhoto::create(attributes: [
+                        'nom_photo' => $imageData['imageName'],
+                        'image_encode' => $imageData['base64Encoded'],
                         'date_dernier_modif' => Carbon::now(),
                     ]);
                     $photoIds[] = $newPhoto->id_photo;
@@ -99,7 +109,8 @@ class TouristAttractionController extends Controller
         try {
             $request->validate([
                 'difficulte_acces' => 'in:1,2,3',
-                'photos' => 'array',
+                'photos' => ['array', 'min:1', 'max:5'],
+                'photo.*' => 'image|mimes:jpeg,png,jpg|max:15048',
                 'commodites' => 'array',
                 'tarif_site_touristique' => 'required|numeric|min:0',
             ]);
@@ -115,9 +126,14 @@ class TouristAttractionController extends Controller
 
                 // Ajouter les nouvelles photos
                 foreach ($request->photos as $photo) {
-                    $newPhoto = TPhoto::create([
-                        'nom_photo' => $photo['nom_photo'],
-                        'image_encode' => $photo['image_encode'],
+                    if (!$photo instanceof \Illuminate\Http\UploadedFile) {
+                        continue;
+                    }
+
+                    $imageData = PhotoService::handleImageToInsert($photo);
+                    $newPhoto = TPhoto::create(attributes: [
+                        'nom_photo' => $imageData['imageName'],
+                        'image_encode' => $imageData['base64Encoded'],
                         'date_dernier_modif' => Carbon::now(),
                     ]);
                     $photoIds[] = $newPhoto->id_photo;

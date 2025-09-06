@@ -101,8 +101,6 @@ class AuthController extends Controller
     }
 
 
-
-
     // Récupérer tous les utilisateurs
     public function getUser()
     {
