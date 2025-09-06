@@ -6,28 +6,33 @@ use Illuminate\Http\Request;
 use App\Models\TSiteTouristique;
 use App\Models\TPhoto;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class TouristAttractionController extends Controller
 {
-    // READ (liste)
+    // GET all sites non supprimés avec pagination
     public function index()
     {
-        return TSiteTouristique::all();
+        return TSiteTouristique::where('est_supprime', operator: false)
+            ->where('est_publie', true)
+            ->paginate(perPage: 10);
     }
 
-    // READ (détails)
+    // GET détails d'un site non supprimé
     public function show($id)
     {
-        return TSiteTouristique::findOrFail($id);
+        return TSiteTouristique::where('id_site_touristique', $id)
+            ->where('est_supprime', false)
+            ->where('est_publie', true)
+            ->firstOrFail();
     }
-
 
     // CREATE
     public function store(Request $request)
     {
-        try{
-
+        DB::beginTransaction();
+        try {
             $request->validate([
                 'nom_lieu' => 'required|string|max:200',
                 'description' => 'required|string',
@@ -35,6 +40,7 @@ class TouristAttractionController extends Controller
                 'difficulte_acces' => 'required|in:1,2,3', //accepte uniquement 1,2,3
                 'photos' => 'array', // tableau de photos [{nom_photo, image_encode}]
                 'commodites' => 'array', // tableau d'IDs
+                'tarif_site_touristique' => 'required|numeric|min:0',
             ]);
 
             // 1. Sauvegarder les photos
@@ -61,18 +67,21 @@ class TouristAttractionController extends Controller
                 'id_user_modif' => $request->id_user_modif,
                 'id_hebergement' => $request->id_hebergement,
                 'difficulte_acces' => $request->difficulte_acces,
+                'tarif_site_touristique' => $request->tarif_site_touristique,
                 'id_tab_photos' => $idPhotosString,
                 'id_tab_commodites' => $idCommoditesString,
-                'est_publie' => $request->est_publie ?? false,
+                // 'est_publie' => $request->est_publie ?? false,
                 'date_dernier_modif' => Carbon::now(),
             ]);
+
+            DB::commit(); // ✅ si tout est ok
 
             return response()->json([
                 'message' => 'Site touristique créé avec succès',
                 'site' => $site
-            ],201);
-        }
-        catch (\Exception $e) {
+            ], 201);
+        } catch (\Exception $e) {
+            DB::rollBack(); // ❌ annule si erreur
             // Retourner l'erreur en JSON avec le message et le code 500
             return response()->json([
                 'message' => 'Erreur lors de la création du site',
@@ -84,13 +93,15 @@ class TouristAttractionController extends Controller
     // Update
     public function update(Request $request, $id)
     {
-        $site = TSiteTouristique::findOrFail($id);
+        $site = $this->show($id);
+        DB::beginTransaction();
 
         try {
             $request->validate([
                 'difficulte_acces' => 'in:1,2,3',
                 'photos' => 'array',
                 'commodites' => 'array',
+                'tarif_site_touristique' => 'required|numeric|min:0',
             ]);
 
             // --- Gestion des photos ---
@@ -101,7 +112,7 @@ class TouristAttractionController extends Controller
                     $oldPhotoIds = explode(',', $site->id_tab_photos);
                     TPhoto::whereIn('id_photo', $oldPhotoIds)->delete();
                 }
-            
+
                 // Ajouter les nouvelles photos
                 foreach ($request->photos as $photo) {
                     $newPhoto = TPhoto::create([
@@ -112,7 +123,7 @@ class TouristAttractionController extends Controller
                     $photoIds[] = $newPhoto->id_photo;
                 }
             }
-            
+
             $idPhotosString = !empty($photoIds) ? implode(',', $photoIds) : $site->id_tab_photos;
             $idCommoditesString = !empty($request->commodites) ? implode(',', $request->commodites) : $site->id_tab_commodites;
 
@@ -121,11 +132,14 @@ class TouristAttractionController extends Controller
                 'description' => $request->description ?? $site->description,
                 'id_hebergement' => $request->id_hebergement ?? $site->id_hebergement,
                 'difficulte_acces' => $request->difficulte_acces ?? $site->difficulte_acces,
+                'tarif_site_touristique' => $request->tarif_site_touristique ?? $site->tarif_site_touristique,
                 'id_tab_commodites' => $idCommoditesString,
                 'id_tab_photos' => $idPhotosString,
                 'est_publie' => $request->est_publie ?? $site->est_publie,
                 'date_dernier_modif' => Carbon::now(),
             ]);
+
+            DB::commit();
 
             return response()->json([
                 'message' => 'Site touristique mis à jour',
@@ -133,6 +147,8 @@ class TouristAttractionController extends Controller
             ], 200);
 
         } catch (ValidationException $e) {
+            DB::rollBack();
+
             return response()->json([
                 'message' => 'Erreur de validation',
                 'errors' => $e->errors()
@@ -140,13 +156,50 @@ class TouristAttractionController extends Controller
         }
     }
 
+    public function modifyStatusPublication(Request $request, $id)
+    {
+        try {
+            $site = $this->show($id);
+            $request->validate([
+                'status' => 'boolean',
+            ]);
+
+            // Met à jour le statut de publication
+            $site->update([
+                'est_publie' => (bool) $request->status ?? $site->est_publie,
+                'date_dernier_modif' => now(),
+                'id_user_modif' => $request->id_user_modif,
+            ]);
+
+            $textStatus = $request->status ? 'publié' : 'refusé';
+
+            return response()->json([
+                'message' => 'Publication ' . $textStatus . ' touristique.',
+                'site' => $site
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Erreur lors de la modification du statut de publication.',
+                'errors' => $e->getMessage()
+            ], 422);
+        }
+    }
 
     //Delete
     public function destroy($id)
     {
-        $site = TSiteTouristique::findOrFail($id);
-        $site->delete();
+        try {
+            $site = $this->show($id);
+            $site->update(attributes: [
+                "est_supprime" => true,
+            ]);
 
-        return response()->json(['message' => 'Site touristique supprimé']);
+            return response()->json(['message' => 'Site touristique supprimé']);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Erreur lors de la suppression du site touristique',
+                'errors' => $e->getMessage()
+            ], 422);
+        }
     }
 }

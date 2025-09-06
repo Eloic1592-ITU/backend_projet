@@ -23,6 +23,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property int|null $id_user_modif
  * @property string $id_tab_type_circuits
  * @property string $id_tab_photos
+ * @property bool $est_supprime
  * 
  * @property TUser|null $t_user
  *
@@ -39,7 +40,8 @@ class TCircuitTouristique extends Model
 		'tarif_circuit_touristique' => 'float',
 		'est_publie' => 'bool',
 		'date_dernier_modif' => 'datetime',
-		'id_user_modif' => 'int'
+		'id_user_modif' => 'int',
+		'est_supprime' => 'bool'
 	];
 
 	protected $fillable = [
@@ -52,7 +54,8 @@ class TCircuitTouristique extends Model
 		'date_dernier_modif',
 		'id_user_modif',
 		'id_tab_type_circuits',
-		'id_tab_photos'
+		'id_tab_photos',
+		'est_supprime'
 	];
 
 	public function t_user()
