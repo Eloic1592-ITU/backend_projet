@@ -22,6 +22,8 @@ use Illuminate\Database\Eloquent\Model;
  * @property string|null $id_tab_commodites
  * @property string|null $id_tab_photos
  * @property bool|null $est_publie
+ * @property float $tarif_site_touristique
+ * @property bool $est_supprime
  * 
  * @property TUser $t_user
  * @property THebergement|null $t_hebergement
@@ -39,7 +41,9 @@ class TSiteTouristique extends Model
 		'id_hebergement' => 'int',
 		'difficulte_acces' => 'int',
 		'date_dernier_modif' => 'datetime',
-		'est_publie' => 'bool'
+		'est_publie' => 'bool',
+		'tarif_site_touristique' => 'float',
+		'est_supprime' => 'bool'
 	];
 
 	protected $fillable = [
@@ -51,7 +55,9 @@ class TSiteTouristique extends Model
 		'date_dernier_modif',
 		'id_tab_commodites',
 		'id_tab_photos',
-		'est_publie'
+		'est_publie',
+		'tarif_site_touristique',
+		'est_supprime'
 	];
 
 	public function t_user()
