@@ -96,6 +96,13 @@ class TouristAttractionController extends Controller
             // --- Gestion des photos ---
             $photoIds = [];
             if (!empty($request->photos)) {
+                // Supprimer les anciennes photos (si tu veux écraser)
+                if (!empty($site->id_tab_photos)) {
+                    $oldPhotoIds = explode(',', $site->id_tab_photos);
+                    TPhoto::whereIn('id_photo', $oldPhotoIds)->delete();
+                }
+            
+                // Ajouter les nouvelles photos
                 foreach ($request->photos as $photo) {
                     $newPhoto = TPhoto::create([
                         'nom_photo' => $photo['nom_photo'],
@@ -105,7 +112,7 @@ class TouristAttractionController extends Controller
                     $photoIds[] = $newPhoto->id_photo;
                 }
             }
-
+            
             $idPhotosString = !empty($photoIds) ? implode(',', $photoIds) : $site->id_tab_photos;
             $idCommoditesString = !empty($request->commodites) ? implode(',', $request->commodites) : $site->id_tab_commodites;
 
@@ -130,11 +137,6 @@ class TouristAttractionController extends Controller
                 'message' => 'Erreur de validation',
                 'errors' => $e->errors()
             ], 422);
-        } catch (\Exception $e) {
-            return response()->json([
-                'message' => 'Erreur lors de la modification du site',
-                'error' => $e->getMessage()
-            ], 500);
         }
     }
 
