@@ -18,3 +18,4 @@ Route::get('/sites/{id}', [TouristAttractionController::class, 'show']); // Dét
 Route::post('/sites', [TouristAttractionController::class, 'store']);    // Créer un site
 Route::put('/sites/{id}', [TouristAttractionController::class, 'update']); // Modifier un site
 Route::delete('/sites/{id}', [TouristAttractionController::class, 'destroy']); // Supprimer un site
+Route::put('/sites/{id}/status-publish', [TouristAttractionController::class, 'modifyStatusPublication']); // Supprimer un site

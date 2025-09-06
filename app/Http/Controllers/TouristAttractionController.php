@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\TCommodite;
 use App\PhotoService;
 use Illuminate\Http\Request;
 use App\Models\TSiteTouristique;
@@ -15,18 +16,70 @@ class TouristAttractionController extends Controller
     // GET all sites non supprimés avec pagination
     public function index()
     {
-        return TSiteTouristique::where('est_supprime', operator: false)
+        $sites = TSiteTouristique::where('est_supprime', false)
             ->where('est_publie', true)
-            ->paginate(perPage: 10);
+            ->paginate(10);
+
+        // transformer chaque site de la pagination
+        $sites->getCollection()->transform(function ($site) {
+            // Commodités
+            $commodites = [];
+            if (!empty($site->id_tab_commodites)) {
+                $idsCommodites = explode(',', $site->id_tab_commodites);
+                $commodites = TCommodite::whereIn('id_commodite', $idsCommodites)->get();
+            }
+
+            // Photos
+            $photos = [];
+            if (!empty($site->id_tab_photos)) {
+                $idsPhotos = explode(',', $site->id_tab_photos);
+                $photos = TPhoto::whereIn('id_photo', $idsPhotos)->get();
+            }
+
+            // Ajout des relations sous forme d’objets
+            $site["tab_commodites"] = $commodites;
+            $site["tab_photos"] = $photos;
+
+            // Nettoyage des champs bruts
+            unset($site->id_tab_commodites, $site->id_tab_photos);
+
+            return $site;
+        });
+
+        return response()->json($sites);
     }
+
 
     // GET détails d'un site non supprimé
     public function show($id)
     {
-        return TSiteTouristique::where('id_site_touristique', $id)
+        $site = TSiteTouristique::where('id_site_touristique', $id)
             ->where('est_supprime', false)
             ->where('est_publie', true)
             ->firstOrFail();
+
+        // Transformer id_tab_commodites en tableau d'objets
+        $commodites = [];
+        if (!empty($site->id_tab_commodites)) {
+            $idsCommodites = explode(',', $site->id_tab_commodites);
+            $commodites = TCommodite::whereIn('id_commodite', $idsCommodites)->get();
+        }
+
+        // Transformer id_tab_photos en tableau d'objets
+        $photos = [];
+        if (!empty($site->id_tab_photos)) {
+            $idsPhotos = explode(',', $site->id_tab_photos);
+            $photos = TPhoto::whereIn('id_photo', $idsPhotos)->get();
+        }
+
+        // Remplacer les champs par les objets
+        $site["tab_commodites"] = $commodites;
+        $site["tab_photos"] = $photos;
+
+        // Supprimer les champs bruts "id_tab_*" si tu veux éviter la redondance
+        unset($site->id_tab_commodites, $site->id_tab_photos);
+
+        return response()->json($site);
     }
 
     // CREATE
@@ -103,9 +156,7 @@ class TouristAttractionController extends Controller
     // Update
     public function update(Request $request, $id)
     {
-        $site = $this->show($id);
         DB::beginTransaction();
-
         try {
             $request->validate([
                 'difficulte_acces' => 'in:1,2,3',
@@ -116,6 +167,7 @@ class TouristAttractionController extends Controller
             ]);
 
             // --- Gestion des photos ---
+            $site = TSiteTouristique::findOrFail($id);
             $photoIds = [];
             if (!empty($request->photos)) {
                 // Supprimer les anciennes photos (si tu veux écraser)
@@ -175,22 +227,25 @@ class TouristAttractionController extends Controller
     public function modifyStatusPublication(Request $request, $id)
     {
         try {
-            $site = $this->show($id);
+            $site = TSiteTouristique::findOrFail($id);
+
             $request->validate([
                 'status' => 'boolean',
+                'id_user_modif' => 'required|numeric'
             ]);
 
             // Met à jour le statut de publication
             $site->update([
                 'est_publie' => (bool) $request->status ?? $site->est_publie,
-                'date_dernier_modif' => now(),
-                'id_user_modif' => $request->id_user_modif,
+                'id_user_modif' => $request->id_user_modif ?? $site->id_user_modif,
+                'date_dernier_modif' => Carbon::now(),
             ]);
+
 
             $textStatus = $request->status ? 'publié' : 'refusé';
 
             return response()->json([
-                'message' => 'Publication ' . $textStatus . ' touristique.',
+                'message' => "Statut du site touristique {$textStatus}.",
                 'site' => $site
             ]);
         } catch (\Exception $e) {
@@ -205,7 +260,7 @@ class TouristAttractionController extends Controller
     public function destroy($id)
     {
         try {
-            $site = $this->show($id);
+            $site = TSiteTouristique::findOrFail($id);
             $site->update(attributes: [
                 "est_supprime" => true,
             ]);
