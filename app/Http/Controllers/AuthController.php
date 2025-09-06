@@ -53,37 +53,51 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         try {
-            $request->validate([
-                'email' => 'required|email',
-                'mot_de_passe' => 'required',
-            ],
-            [
-                'email.required' => 'L\'email est obligatoire.',
-                'email.email' => 'L\'email doit être valide.',
-                'mot_de_passe.required' => 'Le mot de passe est obligatoire.',
-            ]
-        );
+            $request->validate(
+                [
+                    'email' => 'required|email',
+                    'mot_de_passe' => 'required',
+                ],
+                [
+                    'email.required' => 'L\'email est obligatoire.',
+                    'email.email' => 'L\'email doit être valide.',
+                    'mot_de_passe.required' => 'Le mot de passe est obligatoire.',
+                ]
+            );
         
             $user = User::where('email', $request->email)->first();
         
+            // Vérifier email + mot de passe
             if (!$user || hash('sha256', $request->mot_de_passe) !== $user->mot_de_passe) {
                 return response()->json(['message' => 'Identifiants invalides'], 401);
             }
         
-            // Ici tu peux générer un token JWT ou sanctum si tu veux sécuriser l'API
+            // Si c’est un client => on génère un token
+            if ($user->id_role == 4) {
+                $token = $user->createToken('client-token')->plainTextToken;
+            
+                return response()->json([
+                    'message' => 'Connexion réussie (CLIENT)',
+                    'user' => $user,
+                    'token' => $token
+                ]);
+            }
+        
+            // Si ce n’est pas un client => connexion sans token
             return response()->json([
-                'message' => 'Connexion réussie',
+                'message' => 'Connexion réussie (MODERATEUR)',
                 'user' => $user
             ]);
-            
+        
         } catch (\Exception $e) {
-            // Retourner les erreurs en JSON pour le debug
             return response()->json([
                 'message' => 'Erreur lors de la connexion',
                 'error' => $e->getMessage()
             ], 500);
         }
     }
+
+
 
 
     // Récupérer tous les utilisateurs
