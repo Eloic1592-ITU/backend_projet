@@ -100,12 +100,4 @@ class AuthController extends Controller
         }
     }
 
-
-    // Récupérer tous les utilisateurs
-    public function getUser()
-    {
-        $users = User::all(); // récupère tous les utilisateurs
-        return response()->json($users);
-    }
-
 }

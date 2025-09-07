@@ -49,14 +49,18 @@ class TouristAttractionController extends Controller
         return response()->json($sites);
     }
 
-
-    // GET détails d'un site non supprimé
-    public function show($id)
+    public static function getTouristiqueAttractionActiveById($id)
     {
-        $site = TSiteTouristique::where('id_site_touristique', $id)
+        return TSiteTouristique::where('id_site_touristique', $id)
             ->where('est_supprime', false)
             ->where('est_publie', true)
             ->firstOrFail();
+    }
+
+    // GET détails d'un site non supprimé
+    public function showInfo($id)
+    {
+        $site = TouristAttractionController::getTouristiqueAttractionActiveById($id);
 
         // Transformer id_tab_commodites en tableau d'objets
         $commodites = [];
@@ -166,8 +170,10 @@ class TouristAttractionController extends Controller
                 'tarif_site_touristique' => 'required|numeric|min:0',
             ]);
 
+            // Recherche du site si non supprimé et statut de publication actif
+            $site = TouristAttractionController::getTouristiqueAttractionActiveById($id);
+
             // --- Gestion des photos ---
-            $site = TSiteTouristique::findOrFail($id);
             $photoIds = [];
             if (!empty($request->photos)) {
                 // Supprimer les anciennes photos (si tu veux écraser)
@@ -224,10 +230,11 @@ class TouristAttractionController extends Controller
         }
     }
 
-    public function modifyStatusPublication(Request $request, $id)
+    public function modifyPublicationStatus(Request $request, $id)
     {
         try {
-            $site = TSiteTouristique::findOrFail($id);
+            // Recherche du site si non supprimé et statut de publication actif
+            $site = TouristAttractionController::getTouristiqueAttractionActiveById($id);
 
             $request->validate([
                 'status' => 'boolean',
@@ -260,7 +267,8 @@ class TouristAttractionController extends Controller
     public function destroy($id)
     {
         try {
-            $site = TSiteTouristique::findOrFail($id);
+            // Recherche du site si non supprimé et statut de publication actif
+            $site = TouristAttractionController::getTouristiqueAttractionActiveById($id);
             $site->update(attributes: [
                 "est_supprime" => true,
             ]);
