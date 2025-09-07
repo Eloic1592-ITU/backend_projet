@@ -126,7 +126,7 @@ class AuthController extends Controller
         try {
             // Récupère le token envoyé dans le header Authorization
             $token = JWTAuth::getToken();
-
+            
             if (!$token) {
                 return response()->json(['message' => 'Token non fourni'], 400);
             }
