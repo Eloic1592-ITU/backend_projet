@@ -4,6 +4,7 @@ use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\TouristAttractionController;
+use App\Http\Controllers\TouristCircuitContoller;
 
 
 // Authentifications
@@ -28,3 +29,16 @@ Route::prefix('sites')
         Route::delete('/{id}', 'destroy');             // Supprimer un site
         Route::put('/{id}/status-publish', 'modifyPublicationStatus'); // Modifier le statut de publication
     });
+
+// Circuit touristiques
+Route::prefix('circuits')
+    ->controller(TouristCircuitContoller::class)->group(function () {
+        Route::get('/', 'index');                      // Tous les sites
+        Route::get('/{id}', 'showInfo');              // Détail d’un site
+        Route::post('/', 'store');                     // Créer un site
+        Route::put('/{id}', 'update');                 // Modifier un site
+        Route::delete('/{id}', 'destroy');             // Supprimer un site
+        Route::put('/{id}/status-publish', 'modifyPublicationStatus'); // Modifier le statut de publication
+    });
+
+
