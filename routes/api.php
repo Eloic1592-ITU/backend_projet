@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AccomodationController;
 use App\Http\Controllers\CommentaireController;
 use App\Http\Controllers\CommodityController;
 use App\Http\Controllers\UserController;
@@ -79,5 +80,12 @@ Route::prefix('commentaires')
 // Commodites
 Route::prefix('commodites')
     ->controller(CommodityController::class)->group(function () {
+        Route::get('/', 'index');
+    });
+
+
+// Hebergements
+Route::prefix('hebergements')
+    ->controller(AccomodationController::class)->group(function () {
         Route::get('/', 'index');
     });
