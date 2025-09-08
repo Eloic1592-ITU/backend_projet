@@ -26,10 +26,10 @@ class AuthController extends Controller
                 'nom' => $request->nom,
                 'email' => $request->email,
                 'mot_de_passe' => hash('sha256', $request->mot_de_passe), // SHA-256
-                'statut_compte' => true,
+                'statut_compte' => $request->id_role !== 4 ? false : true,
                 'date_creation' => now(),
                 'date_derniere_modif' => now(),
-                'id_role' => $request->id_role !== 4 ? false : true,
+                'id_role' => $request->id_role,
             ]);
 
 
@@ -47,10 +47,14 @@ class AuthController extends Controller
             ];
 
             $token = JWTAuth::claims($customClaims)->fromUser($user);
-
+            if ($user) {
+                $userArray = $user->toArray();
+                unset($userArray['mot_de_passe']);
+            }
             return response()->json([
                 'message' => 'Utilisateur créé avec succès',
                 'token' => $token,
+                'user' => $user
             ], 201);
 
         } catch (Exception $e) {
@@ -98,11 +102,15 @@ class AuthController extends Controller
             ];
 
             $token = JWTAuth::claims($customClaims)->fromUser($user);
-
+            if ($user) {
+                $userArray = $user->toArray();
+                unset($userArray['mot_de_passe']);
+            }
             return response()->json([
                 'message' => 'Connexion réussie',
                 'token' => $token,
-            ]);
+                'user' => $user
+            ], 200);
 
         } catch (Exception $e) {
             return response()->json([
@@ -141,5 +149,23 @@ class AuthController extends Controller
                 'error' => $e->getMessage()
             ], 500);
         }
+    }
+
+    public function checkConnectionState(Request $request)
+    {
+        $authHeader = $request->header('Authorization');
+        if (!$authHeader) {
+            return response()->json(['message' => 'Accès refusé : Aucun token fourni'], 403);
+        }
+
+        $connectionState = true;
+        // Extraire le token "Bearer <token>"
+        $token = str_replace('Bearer ', '', $authHeader);
+        if (!strlen($token))
+            $connectionState = false;
+
+        return response()->json([
+            "connectionState" => $connectionState
+        ], 201);
     }
 }

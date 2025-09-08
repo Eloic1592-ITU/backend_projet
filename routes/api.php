@@ -13,9 +13,12 @@ use App\Http\Controllers\ReservationController;
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/logout', [AuthController::class, 'logout']);
+Route::post('/check', [AuthController::class, 'checkConnectionState']);
+
 
 // Utilisateurs
 Route::prefix('users')
+    // ->middleware('verifyToken')
     ->controller(UserController::class)->group(function () {
         Route::get('/', action: 'getUser'); // Tous les utilisateurs
         Route::get('/{id}', 'getUserById');  // Détail d’un site
@@ -23,6 +26,7 @@ Route::prefix('users')
 
 // sites touristiques
 Route::prefix('sites')
+    // ->middleware('verifyToken')
     ->controller(TouristAttractionController::class)->group(function () {
         Route::get('/', 'index');                      // Tous les sites
         Route::get('/{id}', 'showInfo');               // Détail d’un site
@@ -34,6 +38,7 @@ Route::prefix('sites')
 
 // Circuit touristiques
 Route::prefix('circuits')
+    // ->middleware('verifyToken')
     ->controller(TouristCircuitContoller::class)->group(function () {
         Route::get('/', 'index');                      // Tous les sites
         Route::get('/{id}', 'showInfo');              // Détail d’un site
