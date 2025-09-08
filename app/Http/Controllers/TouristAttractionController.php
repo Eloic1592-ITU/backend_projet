@@ -3,12 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\TCommodite;
-use App\PhotoService;
 use Illuminate\Http\Request;
 use App\Models\TSiteTouristique;
 use App\Models\TPhoto;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 class TouristAttractionController extends Controller
@@ -132,24 +132,20 @@ class TouristAttractionController extends Controller
                 'commodites' => 'array', // tableau d'IDs
                 'tarif_site_touristique' => 'required|numeric|min:0',
             ]);
-
-            // 1. Sauvegarder les photos
+            dd(vars: $request->all());
+        // 1. Sauvegarder les photos dans storage/app/public/photos
             $photoIds = [];
-            if (
-                !empty($request->photos) && is_array($request->photos)
-                && count($request->photos)
-            ) {
-                foreach ($request->photos as $photo) {
-                    if (!$photo instanceof \Illuminate\Http\UploadedFile) {
-                        continue;
-                    }
+            if ($request->hasFile('photos')) {
+                foreach ($request->file('photos') as $photo) {
+                    $imagePath = $photo->store('photos', 'public'); 
+                    $imageName = basename($imagePath);
 
-                    $imageData = PhotoService::handleImageToInsert($photo);
-                    $newPhoto = TPhoto::create(attributes: [
-                        'nom_photo' => $imageData['imageName'],
-                        'image_encode' => $imageData['base64Encoded'],
+                    $newPhoto = TPhoto::create([
+                        'nom_photo' => $imageName,
+                        'image_encode' => $imagePath,
                         'date_dernier_modif' => Carbon::now(),
                     ]);
+
                     $photoIds[] = $newPhoto->id_photo;
                 }
             }
@@ -176,8 +172,10 @@ class TouristAttractionController extends Controller
 
             return response()->json([
                 'message' => 'Site touristique créé avec succès',
+                'photos'=> $request->photos,
                 'site' => $site
             ], 201);
+
         } catch (\Exception $e) {
             DB::rollBack(); // ❌ annule si erreur
             // Retourner l'erreur en JSON avec le message et le code 500
@@ -192,74 +190,97 @@ class TouristAttractionController extends Controller
     public function update(Request $request, $id)
     {
         DB::beginTransaction();
+    
         try {
             $request->validate([
-                'difficulte_acces' => 'in:1,2,3',
+                'nom_lieu' => 'string',
+                'description' => 'string',
+                'id_user_modif' => 'integer',
+                'difficulte_acces' => 'in:1,2,3', //accepte uniquement 1,2,3
                 'photos' => ['array', 'min:1', 'max:5'],
                 'photo.*' => 'image|mimes:jpeg,png,jpg|max:15048',
-                'commodites' => 'array',
-                'tarif_site_touristique' => 'required|numeric|min:0',
+                'commodites' => 'array', // tableau d'IDs
+                'tarif_site_touristique' => 'numeric|min:0',
             ]);
+        
+            // 🔹 Récupérer le site existant
+            $site = TSiteTouristique::findOrFail($id);
+            // dd($request->all());
 
-            // Recherche du site si non supprimé et statut de publication actif
-            $site = TouristAttractionController::getTouristiqueAttractionActiveById($id);
-
+        
             // --- Gestion des photos ---
             $photoIds = [];
-            if (!empty($request->photos)) {
-                // Supprimer les anciennes photos (si tu veux écraser)
+            if ($request->hasFile('photos')) {
+                // Supprimer les anciennes photos
                 if (!empty($site->id_tab_photos)) {
                     $oldPhotoIds = explode(',', $site->id_tab_photos);
-                    TPhoto::whereIn('id_photo', $oldPhotoIds)->delete();
-                }
-
-                // Ajouter les nouvelles photos
-                foreach ($request->photos as $photo) {
-                    if (!$photo instanceof \Illuminate\Http\UploadedFile) {
-                        continue;
+                    $oldPhotos = TPhoto::whereIn('id_photo', $oldPhotoIds)->get();
+                
+                    foreach ($oldPhotos as $oldPhoto) {
+                        // Supprimer le fichier physique
+                        if ($oldPhoto->image_encode && Storage::disk('public')->exists($oldPhoto->image_encode)) {
+                            Storage::disk('public')->delete($oldPhoto->image_encode);
+                        }
+                        $oldPhoto->delete();
                     }
-
-                    $imageData = PhotoService::handleImageToInsert($photo);
-                    $newPhoto = TPhoto::create(attributes: [
-                        'nom_photo' => $imageData['imageName'],
-                        'image_encode' => $imageData['base64Encoded'],
+                }
+            
+                // Ajouter les nouvelles photos
+                foreach ($request->file('photos') as $photo) {
+                    $imagePath = $photo->store('photos', 'public');
+                    $imageName = basename($imagePath);
+                
+                    $newPhoto = TPhoto::create([
+                        'nom_photo' => $imageName,
+                        'image_encode' => $imagePath,
                         'date_dernier_modif' => Carbon::now(),
                     ]);
+                
                     $photoIds[] = $newPhoto->id_photo;
                 }
             }
-
+        
             $idPhotosString = !empty($photoIds) ? implode(',', $photoIds) : $site->id_tab_photos;
             $idCommoditesString = !empty($request->commodites) ? implode(',', $request->commodites) : $site->id_tab_commodites;
-
+        
+            // --- Mise à jour du site ---
             $site->update([
-                'nom_lieu' => $request->nom_lieu ?? $site->nom_lieu,
-                'description' => $request->description ?? $site->description,
-                'id_hebergement' => $request->id_hebergement ?? $site->id_hebergement,
-                'difficulte_acces' => $request->difficulte_acces ?? $site->difficulte_acces,
-                'tarif_site_touristique' => $request->tarif_site_touristique ?? $site->tarif_site_touristique,
-                'id_tab_commodites' => $idCommoditesString,
+                'nom_lieu' => $request->input('nom_lieu', $site->nom_lieu),
+                'description' => $request->input('description', $site->description),
+                'id_user_modif' => $request->input('id_user_modif', $site->id_user_modif),
+                'id_hebergement' => $request->input('id_hebergement', $site->id_hebergement),
+                'difficulte_acces' => $request->input('difficulte_acces', $site->difficulte_acces),
+                'tarif_site_touristique' => $request->input('tarif_site_touristique', $site->tarif_site_touristique),
                 'id_tab_photos' => $idPhotosString,
-                'est_publie' => $request->est_publie ?? $site->est_publie,
+                'id_tab_commodites' => $idCommoditesString,
+                'est_publie' => $request->input('est_publie', $site->est_publie),
                 'date_dernier_modif' => Carbon::now(),
             ]);
-
+        
             DB::commit();
-
+        
             return response()->json([
-                'message' => 'Site touristique mis à jour',
+                'message' => 'Site touristique mis à jour avec succès',
                 'site' => $site
             ], 200);
-
+        
         } catch (ValidationException $e) {
             DB::rollBack();
-
             return response()->json([
                 'message' => 'Erreur de validation',
                 'errors' => $e->errors()
             ], 422);
+        
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Erreur lors de la mise à jour du site',
+                'error' => $e->getMessage()
+            ], 500);
         }
     }
+
+
 
     public function modifyPublicationStatus(Request $request, $id)
     {

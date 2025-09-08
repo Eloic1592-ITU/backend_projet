@@ -42,7 +42,8 @@ class TReservation extends Model
 		'nombre_enfant' => 'int',
 		'date_creation' => 'datetime',
 		'date_paiement' => 'datetime',
-		'statut_paiement' => 'bool'
+		'statut_paiement' => 'bool',
+		'est_supprime' => 'bool'
 	];
 
 	protected $fillable = [
@@ -54,11 +55,22 @@ class TReservation extends Model
 		'nombre_enfant',
 		'date_creation',
 		'date_paiement',
-		'statut_paiement'
+		'statut_paiement',
+		'est_supprime'
 	];
 
 	public function t_user()
 	{
 		return $this->belongsTo(TUser::class, 'id_client');
+	}
+
+	public function t_site()
+	{
+    return $this->belongsTo(TSiteTouristique::class, 'id_site_touristique', 'id_site_touristique');
+	}
+
+	public function t_circuit()
+	{
+    return $this->belongsTo(TCircuitTouristique::class, 'id_circuit_touristique', 'id_circuit_touristique');
 	}
 }

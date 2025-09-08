@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\DB;
 use App\Models\TTypeCircuit;
 use Carbon\Carbon;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Storage;
 
 class TouristCircuitContoller extends Controller
 {
@@ -160,87 +161,12 @@ public function index(Request $request)
         return response()->json($circuit);
     }
 
-     public function store(Request $request)
-     {
-        DB::beginTransaction();
-
-        try{            
-            $request->validate([
-                'titre' => 'required|string|max:200',
-                'description' => 'required|string',
-                'duree_sejour' => 'required|integer',
-                'tarif_circuit_touristique' => 'required|numeric|min:0',
-                'id_user_modif' => 'required|integer',
-                'site_touristiques' => 'array',
-                'type_circuits' =>'array',
-                'photos' => ['required', 'array', 'min:1', 'max:5'],
-                'photo.*' => 'image|mimes:jpeg,png,jpg|max:15048',
-            ]);
-        // 1. Sauvegarder les photos
-        $photoIds = [];
-        if (
-            !empty($request->photos) && is_array($request->photos)
-            && count($request->photos)
-        ) {
-                foreach ($request->photos as $photo) {
-                    if (!$photo instanceof \Illuminate\Http\UploadedFile) {
-                        continue;
-                    }
-
-                    $imageData = PhotoService::handleImageToInsert($photo);
-                    $newPhoto = TPhoto::create(attributes: [
-                        'nom_photo' => $imageData['imageName'],
-                        'image_encode' => $imageData['base64Encoded'],
-                        'date_dernier_modif' => Carbon::now(),
-                    ]);
-                    $photoIds[] = $newPhoto->id_photo;
-                }
-        }
-        // 2. Transformer en string séparée par des virgules
-            $idPhotosString = !empty($photoIds) ? implode(',', $photoIds) : null;
-            // dd($idPhotosString);
-            $idTypecircuitsString = !empty($request->type_circuits) ? implode(',', $request->type_circuits) : null;
-            $idSitetouristiquesString = !empty($request->site_touristiques) ? implode(',', $request->site_touristiques) : null;
-
-        // 3. Créer le circuit touristique
-        $circuit = TCircuitTouristique::create([
-                'titre' => $request->titre,
-                'description' => $request->description,
-                'id_user_modif' => $request->id_user_modif,
-                'duree_sejour' => $request->duree_sejour,
-                'tarif_circuit_touristique' => $request->tarif_circuit_touristique,
-                'id_tab_photos' => $idPhotosString,
-                'id_tab_type_circuits' =>$idTypecircuitsString,
-                'id_tab_site_touristiques' => $idSitetouristiquesString,
-                // 'est_publie' => $request->est_publie ?? false,
-                'date_dernier_modif' => Carbon::now(),
-        ]);
-
-         DB::commit(); // ✅ si tout est ok
-
-        return response()->json([
-            'message' => 'Circuit touristique créé avec succès',
-            'site' => $circuit
-        ], 201);
-        } catch (\Exception $e) {
-            DB::rollBack(); // ❌ annule si erreur
-            // Retourner l'erreur en JSON avec le message et le code 500
-            return response()->json([
-                'message' => 'Erreur lors de la création du circuit',
-                'error' => $e->getMessage(),
-                'photos'=>$request->photos
-            ], 500);
-        }
-     }
-
-
-
-    // Update
-    public function update(Request $request, $id)
+    public function store(Request $request)
     {
         DB::beginTransaction();
-        try {
-             $request->validate([
+
+        try {            
+            $request->validate([
                 'titre' => 'required|string|max:200',
                 'description' => 'required|string',
                 'duree_sejour' => 'required|integer',
@@ -249,69 +175,158 @@ public function index(Request $request)
                 'site_touristiques' => 'array',
                 'type_circuits' => 'array',
                 'photos' => ['required', 'array', 'min:1', 'max:5'],
-                'photo.*' => 'image|mimes:jpeg,png,jpg|max:15048',
+                'photos.*' => 'image|mimes:jpeg,png,jpg|max:15048',
             ]);
-            // Recherche du site si non supprimé et statut de publication actif
-            $circuit = TouristCircuitContoller::getCircuitTouristiqueActiveById($id);
 
-            // --- Gestion des photos ---
+            // 1. Sauvegarder les photos dans storage/app/public/photos
             $photoIds = [];
-            if (!empty($request->photos)) {
-                // Supprimer les anciennes photos (si tu veux écraser)
-                if (!empty($circuit->id_tab_photos)) {
-                    $oldPhotoIds = explode(',', $circuit->id_tab_photos);
-                    TPhoto::whereIn('id_photo', $oldPhotoIds)->delete();
-                }
+            if ($request->hasFile('photos')) {
+                foreach ($request->file('photos') as $photo) {
+                    $imagePath = $photo->store('photos', 'public'); 
+                    $imageName = basename($imagePath);
 
-                // Ajouter les nouvelles photos
-                foreach ($request->photos as $photo) {
-                    if (!$photo instanceof \Illuminate\Http\UploadedFile) {
-                        continue;
-                    }
-
-                    $imageData = PhotoService::handleImageToInsert($photo);
-                    $newPhoto = TPhoto::create(attributes: [
-                        'nom_photo' => $imageData['imageName'],
-                        'image_encode' => $imageData['base64Encoded'],
+                    $newPhoto = TPhoto::create([
+                        'nom_photo' => $imageName,
+                        'image_encode' => $imagePath,
                         'date_dernier_modif' => Carbon::now(),
                     ]);
+
                     $photoIds[] = $newPhoto->id_photo;
                 }
             }
 
-            $idPhotosString = !empty($photoIds) ? implode(',', $photoIds) : $circuit->id_tab_photos;
-            $idSitetouristiquesString = !empty($request->site_touristiques) ? implode(',', $request->site_touristiques) : $circuit->id_tab_site_touristiques;
-            $idTypecircuitsString = !empty($request->type_circuits) ? implode(',', $request->type_circuits) : $circuit->id_tab_type_circuits;
+            // 2. Transformer en string séparée par des virgules
+            $idPhotosString = !empty($photoIds) ? implode(',', $photoIds) : null;
+            $idTypeCircuitsString = !empty($request->type_circuits) ? implode(',', $request->type_circuits) : null;
+            $idSiteTouristiquesString = !empty($request->site_touristiques) ? implode(',', $request->site_touristiques) : null;
 
-            $circuit->update([
-                'titre' => $request->titre ?? $circuit->titre,
-                'description' => $request->description ?? $circuit->description,
+            // 3. Créer le circuit touristique
+            $circuit = TCircuitTouristique::create([
+                'titre' => $request->titre,
+                'description' => $request->description,
                 'id_user_modif' => $request->id_user_modif,
                 'duree_sejour' => $request->duree_sejour,
                 'tarif_circuit_touristique' => $request->tarif_circuit_touristique,
                 'id_tab_photos' => $idPhotosString,
-                'id_tab_type_circuits' =>$idTypecircuitsString,
-                'id_tab_site_touristiques' => $idSitetouristiquesString,
-                'est_publie' => $request->est_publie ?? $circuit->est_publie,
+                'id_tab_type_circuits' => $idTypeCircuitsString,
+                'id_tab_site_touristiques' => $idSiteTouristiquesString,
                 'date_dernier_modif' => Carbon::now(),
             ]);
 
             DB::commit();
 
             return response()->json([
-                'message' => 'Circuit touristique mis à jour',
-                'site' => $circuit
-            ], 200);
+                'message' => 'Circuit touristique créé avec succès',
+                'circuit' => $circuit
+            ], 201);
 
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Erreur lors de la création du circuit',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+
+
+    // Update
+    public function update(Request $request, $id)
+    {
+        DB::beginTransaction();
+    
+        try {
+            // 🔹 Validation
+            $request->validate([
+                'titre' => 'string|max:200',
+                'description' => 'string',
+                'duree_sejour' => 'integer',
+                'tarif_circuit_touristique' => 'numeric|min:0',
+                'id_user_modif' => 'integer',
+                'site_touristiques' => 'array',
+                'type_circuits' => 'array',
+                'photos' => ['array', 'min:1', 'max:5'],
+                'photo.*' => 'image|mimes:jpeg,png,jpg|max:15048',
+            ]);
+            // dd($request->all());
+
+
+            // 🔹 Récupérer le circuit existant
+            $circuit = TCircuitTouristique::findOrFail($id);
+ 
+            // --- Gestion des photos ---
+            $photoIds = [];
+            if ($request->hasFile('photos')) {
+                // Supprimer les anciennes photos
+                if (!empty($circuit->id_tab_photos)) {
+                    $oldPhotoIds = explode(',', $circuit->id_tab_photos);
+                    $oldPhotos = TPhoto::whereIn('id_photo', $oldPhotoIds)->get();
+                
+                    foreach ($oldPhotos as $oldPhoto) {
+                        if ($oldPhoto->image_encode && Storage::disk('public')->exists($oldPhoto->image_encode)) {
+                            Storage::disk('public')->delete($oldPhoto->image_encode);
+                        }
+                        $oldPhoto->delete();
+                    }
+                }
+            
+                // Ajouter les nouvelles photos
+                foreach ($request->file('photos') as $photo) {
+                    $imagePath = $photo->store('photos', 'public');
+                    $imageName = basename($imagePath);
+                
+                    $newPhoto = TPhoto::create([
+                        'nom_photo' => $imageName,
+                        'image_encode' => $imagePath,
+                        'date_dernier_modif' => Carbon::now(),
+                    ]);
+                
+                    $photoIds[] = $newPhoto->id_photo;
+                }
+            }
+        
+            $idPhotosString = !empty($photoIds) ? implode(',', $photoIds) : $circuit->id_tab_photos;
+            $idSitetouristiquesString = !empty($request->site_touristiques) ? implode(',', $request->site_touristiques) : $circuit->id_tab_site_touristiques;
+            $idTypecircuitsString = !empty($request->type_circuits) ? implode(',', $request->type_circuits) : $circuit->id_tab_type_circuits;
+        
+            // --- Mise à jour du circuit ---
+            $circuit->update([
+                'titre' => $request->input('titre', $circuit->titre),
+                'description' => $request->input('description', $circuit->description),
+                'id_user_modif' => $request->input('id_user_modif', $circuit->id_user_modif),
+                'duree_sejour' => $request->input('duree_sejour', $circuit->duree_sejour),
+                'tarif_circuit_touristique' => $request->input('tarif_circuit_touristique', $circuit->tarif_circuit_touristique),
+                'id_tab_photos' => $idPhotosString,
+                'id_tab_type_circuits' => $idTypecircuitsString,
+                'id_tab_site_touristiques' => $idSitetouristiquesString,
+                'est_publie' => $request->input('est_publie', $circuit->est_publie),
+                'date_dernier_modif' => Carbon::now(),
+            ]);
+        
+            DB::commit();
+        
+            return response()->json([
+                'message' => 'Circuit touristique mis à jour avec succès',
+                'circuit' => $circuit
+            ], 200);
+        
         } catch (ValidationException $e) {
             DB::rollBack();
-
             return response()->json([
                 'message' => 'Erreur de validation',
                 'errors' => $e->errors()
             ], 422);
+        
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Erreur lors de la mise à jour du circuit',
+                'error' => $e->getMessage()
+            ], 500);
         }
     }
+
 
 
 
