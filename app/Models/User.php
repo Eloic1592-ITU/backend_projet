@@ -1,46 +1,80 @@
 <?php
 
-/**
- * Created by Reliese Model.
- */
-
 namespace App\Models;
 
-use Carbon\Carbon;
-use Illuminate\Database\Eloquent\Model;
+// use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
+use Tymon\JWTAuth\Contracts\JWTSubject;
 
-/**
- * Class User
- * 
- * @property int $id
- * @property string $name
- * @property string $email
- * @property Carbon|null $email_verified_at
- * @property string $password
- * @property string|null $remember_token
- * @property Carbon|null $created_at
- * @property Carbon|null $updated_at
- *
- * @package App\Models
- */
-class User extends Model
+class User extends Authenticatable implements JWTSubject
 {
-	protected $table = 'users';
+    /** @use HasFactory<\Database\Factories\UserFactory> */
+    use HasFactory, HasApiTokens, Notifiable;
 
-	protected $casts = [
-		'email_verified_at' => 'datetime'
-	];
+    /**
+     * Get the identifier that will be stored in the JWT token.
+     */
+    public function getJWTIdentifier()
+    {
+        return $this->getKey();
+    }
 
-	protected $hidden = [
-		'password',
-		'remember_token'
-	];
+    /**
+     * Return an array with custom claims to be added to the JWT token.
+     */
+    public function getJWTCustomClaims()
+    {
+        return [];
+    }
+    
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var list<string>
+     */
+    protected $table = 't_user'; // Nom de ta table
+    protected $primaryKey = 'id_user'; // Clé primaire
+    public $timestamps = false; // Tu gères déjà les dates toi-même
 
-	protected $fillable = [
-		'name',
-		'email',
-		'email_verified_at',
-		'password',
-		'remember_token'
-	];
+
+    protected $fillable = [
+        'nom',
+        'email',
+        'mot_de_passe',
+        'statut_compte',
+        'date_creation',
+        'date_derniere_modif',
+        'id_role',
+    ];
+
+    /**
+     * The attributes that should be hidden for serialization.
+     *
+     * @var list<string>
+     */
+    protected $hidden = [
+        'mot_de_passe',
+    ];
+
+    // Indiquer à Laravel d'utiliser "mot_de_passe" comme champ password
+    public function getAuthPassword()
+    {
+        return $this->mot_de_passe;
+    }
+
+    /**
+     * Get the attributes that should be cast.
+     *
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'email_verified_at' => 'datetime',
+            'password' => 'hashed',
+        ];
+    }
 }
