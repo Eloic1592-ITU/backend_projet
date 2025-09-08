@@ -26,10 +26,10 @@ class AuthController extends Controller
                 'nom' => $request->nom,
                 'email' => $request->email,
                 'mot_de_passe' => hash('sha256', $request->mot_de_passe), // SHA-256
-                'statut_compte' => true,
+                'statut_compte' => $request->id_role !== 4 ? false : true,
                 'date_creation' => now(),
                 'date_derniere_modif' => now(),
-                'id_role' => $request->id_role !== 4 ? false : true,
+                'id_role' => $request->id_role,
             ]);
 
 
@@ -126,7 +126,7 @@ class AuthController extends Controller
         try {
             // Récupère le token envoyé dans le header Authorization
             $token = JWTAuth::getToken();
-            
+
             if (!$token) {
                 return response()->json(['message' => 'Token non fourni'], 400);
             }
