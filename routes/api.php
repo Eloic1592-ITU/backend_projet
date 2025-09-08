@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\CommentaireController;
+use App\Http\Controllers\CommodityController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
@@ -49,7 +50,7 @@ Route::prefix('circuits')
     });
 
 
-    
+
 // Reservation
 Route::prefix('reservations')
     ->controller(ReservationController::class)->group(function () {
@@ -69,7 +70,14 @@ Route::prefix('commentaires')
         Route::post('/', 'store');                     // Créer un commentaire
         Route::put('/{id}', 'update');                 // Modifier un commentaire
         // Route::put('/{id}/status-comment', 'updateStatut'); // Modifier le statut de publication
-        Route::get('/site/{id_site}','findByIdSite');
+        Route::get('/site/{id_site}', 'findByIdSite');
         Route::get('/circuit/{id_circuit}', 'findByIdCircuit');
 
+    });
+
+
+// Commodites
+Route::prefix('commodites')
+    ->controller(CommodityController::class)->group(function () {
+        Route::get('/', 'index');
     });
