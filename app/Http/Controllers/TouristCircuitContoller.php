@@ -14,48 +14,107 @@ use Illuminate\Validation\ValidationException;
 
 class TouristCircuitContoller extends Controller
 {
-       public function index()
-    {
-        $circuits = TCircuitTouristique::where('est_supprime', false)
-            ->where('est_publie', true)
-            ->paginate(10);
+public function index(Request $request)
+{
+    $query = TCircuitTouristique::where('est_supprime', false);
 
-        // transformer chaque site de la pagination
-        $circuits->getCollection()->transform(function ($circuit) {
-            // Type de circuits
-            $type_circuits = [];
-            if (!empty($circuit->id_tab_type_circuits)) {
-                $idstabtypecircuits = explode(',', $circuit->id_tab_type_circuits);
-                $type_circuits = TTypeCircuit::whereIn('id_type_circuit', $idstabtypecircuits)->get();
-            }
-
-            // Photos
-            $photos = [];
-            if (!empty($circuit->id_tab_photos)) {
-                $idsPhotos = explode(',', $circuit->id_tab_photos);
-                $photos = TPhoto::whereIn('id_photo', $idsPhotos)->get();
-            }
-
-            // Site touristique
-            $sites = [];
-            if (!empty($circuit->id_tab_site_touristiques)) {
-                $idssitetouristiques = explode(',', $circuit->id_tab_site_touristiques);
-                $sites = TSiteTouristique::whereIn('id_site_touristique', $idssitetouristiques)->get();
-            }
-
-            // Ajout des relations sous forme d’objets
-            $circuit["tab_type_circuits"] = $type_circuits;
-            $circuit["tab_photos"] = $photos;
-            $circuit["tab_site_touristiques"] = $sites;
-
-            // Nettoyage des champs bruts
-            unset($circuit->id_tab_type_circuits, $circuit->id_tab_photos,$circuit->id_tab_site_touristiques);
-
-            return $circuit;
-        });
-
-        return response()->json($circuits);
+    // Filtre par titre (mot-clé)
+    if ($request->has('titre_site')) {
+        $query->where('titre', 'ILIKE', '%' . $request->titre . '%');
     }
+
+    // // Filtre par durée de séjour (min et max)
+    if ($request->has('duree')) {
+        $query->where('duree_sejour', '=', $request->duree_min);
+    }
+    if ($request->has('duree_max')) {
+        $query->where('duree_sejour', '<=', $request->duree_max);
+    }
+
+    // Filtre par tarif (min et max)
+    if ($request->has('prix_min')) {
+        $query->where('tarif_circuit_touristique', '>=', $request->prix_min);
+    }
+    if ($request->has('prix_max')) {
+        $query->where('tarif_circuit_touristique', '<=', $request->prix_max);
+    }
+
+    // // Filtre par statut de publication
+    if ($request->has('est_publie')) {
+            $query->where('est_publie', filter_var($request->est_publie, FILTER_VALIDATE_BOOLEAN));
+    }
+
+    // Filtre par types de circuits (noms au lieu des IDs)
+    if ($request->has('types')) {
+        $types = explode(',', $request->types);
+        $idsTypes = TTypeCircuit::whereIn('nom_type_circuit', $types)
+                    ->pluck('id_type_circuit')
+                    ->toArray();
+
+        if (!empty($idsTypes)) {
+            $query->where(function ($q) use ($idsTypes) {
+                foreach ($idsTypes as $id) {
+                    $q->orWhere('id_tab_type_circuits', 'LIKE', "%$id%");
+                }
+            });
+        }
+    }
+
+    if ($request->has('sites')) {
+        $sites = explode(',', $request->sites);
+        $idsSites = TSiteTouristique::whereIn('nom_lieu', $sites)
+                    ->pluck('id_site_touristique')
+                    ->toArray();
+
+        if (!empty($idsSites)) {
+            $query->where(function ($q) use ($idsSites) {
+                foreach ($idsSites as $id) {
+                    $q->orWhere('id_tab_site_touristiques', 'LIKE', "%$id%");
+                }
+            });
+        }
+    }
+
+
+    $circuits = $query->paginate(10);
+
+    // Transformer chaque circuit
+    $circuits->getCollection()->transform(function ($circuit) {
+        // Types de circuits
+        $type_circuits = [];
+        if (!empty($circuit->id_tab_type_circuits)) {
+            $idsTypeCircuits = explode(',', $circuit->id_tab_type_circuits);
+            $type_circuits = TTypeCircuit::whereIn('id_type_circuit', $idsTypeCircuits)->get();
+        }
+
+        // Photos
+        $photos = [];
+        if (!empty($circuit->id_tab_photos)) {
+            $idsPhotos = explode(',', $circuit->id_tab_photos);
+            $photos = TPhoto::whereIn('id_photo', $idsPhotos)->get();
+        }
+
+        // Sites touristiques
+        $sites = [];
+        if (!empty($circuit->id_tab_site_touristiques)) {
+            $idsSitesTouristiques = explode(',', $circuit->id_tab_site_touristiques);
+            $sites = TSiteTouristique::whereIn('id_site_touristique', $idsSitesTouristiques)->get();
+        }
+
+        // Ajout des relations
+        $circuit["tab_type_circuits"] = $type_circuits;
+        $circuit["tab_photos"] = $photos;
+        $circuit["tab_site_touristiques"] = $sites;
+
+        // Nettoyage des champs bruts
+        unset($circuit->id_tab_type_circuits, $circuit->id_tab_photos, $circuit->id_tab_site_touristiques);
+
+        return $circuit;
+    });
+
+    return response()->json($circuits);
+}
+
 
     public static function getCircuitTouristiqueActiveById($id)
     {

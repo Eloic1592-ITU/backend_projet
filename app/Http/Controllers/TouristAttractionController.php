@@ -14,13 +14,45 @@ use Illuminate\Validation\ValidationException;
 class TouristAttractionController extends Controller
 {
     // GET all sites non supprimés avec pagination
-    public function index()
+    public function index(Request $request)
     {
-        $sites = TSiteTouristique::where('est_supprime', false)
-            ->where('est_publie', true)
-            ->paginate(10);
+        $query = TSiteTouristique::where('est_supprime', false);
 
-        // transformer chaque site de la pagination
+        // Filtre par nom
+        if ($request->has('nom')) {
+            $query->where('nom_lieu', 'ILIKE', '%' . $request->nom . '%');
+        }
+
+        // Filtre par difficulté d’accès (1=facile, 2=moyen, 3=difficile)
+        if ($request->has('difficulte')) {
+            $query->where('difficulte_acces', $request->difficulte);
+        }
+
+        // Filtre par est_publie
+        if ($request->has('est_publie')) {
+            $query->where('est_publie', filter_var($request->est_publie, FILTER_VALIDATE_BOOLEAN));
+        }
+
+        // Filtre par commodités (par nom)
+        if ($request->has('commodites')) {
+            // On récupère les noms de commodités dans l’URL : ex "Piscine,Wi-Fi"
+            $nomsCommodites = explode(',', $request->commodites);
+
+            // On cherche leurs IDs dans t_commodite
+            $commoditeIds = TCommodite::whereIn('nom_commodite', $nomsCommodites)
+                ->pluck('id_commodite')
+                ->toArray();
+
+            // Puis on filtre les sites qui contiennent ces IDs
+            foreach ($commoditeIds as $id) {
+                $query->whereRaw("id_tab_commodites ILIKE ?", ['%' . $id . '%']);
+            }
+        }
+
+        // pagination
+        $sites = $query->paginate(10);
+
+        // Transformation des résultats
         $sites->getCollection()->transform(function ($site) {
             // Commodités
             $commodites = [];
@@ -36,11 +68,9 @@ class TouristAttractionController extends Controller
                 $photos = TPhoto::whereIn('id_photo', $idsPhotos)->get();
             }
 
-            // Ajout des relations sous forme d’objets
             $site["tab_commodites"] = $commodites;
             $site["tab_photos"] = $photos;
 
-            // Nettoyage des champs bruts
             unset($site->id_tab_commodites, $site->id_tab_photos);
 
             return $site;
@@ -48,6 +78,7 @@ class TouristAttractionController extends Controller
 
         return response()->json($sites);
     }
+
 
     public static function getTouristiqueAttractionActiveById($id)
     {
