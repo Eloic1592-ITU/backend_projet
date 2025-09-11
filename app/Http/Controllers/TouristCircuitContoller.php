@@ -95,8 +95,7 @@ class TouristCircuitContoller extends Controller
         // Pagination
         $circuits = $query->paginate(10);
 
-        Log::info("HEEEEEE " .  $circuits);
-
+        // Log::info("HEEEEEE " .  $circuits);
 
         // Transformation des circuits
         $circuits->getCollection()->transform(function ($circuit) {
