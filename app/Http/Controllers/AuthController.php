@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Exception;
 use Illuminate\Http\Request;
 use App\Models\User;
+use Log;
 use Tymon\JWTAuth\Facades\JWTAuth;
 
 class AuthController extends Controller
@@ -144,6 +145,7 @@ class AuthController extends Controller
                 'error' => $e->getMessage()
             ], 401);
         } catch (Exception $e) {
+            Log::info('Message de log ' . $e->getMessage());
             return response()->json([
                 'message' => 'Erreur lors de la déconnexion',
                 'error' => $e->getMessage()
