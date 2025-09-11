@@ -3,6 +3,7 @@
 use App\Http\Controllers\AccomodationController;
 use App\Http\Controllers\CommentaireController;
 use App\Http\Controllers\CommodityController;
+use App\Http\Controllers\HebergementController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
@@ -20,7 +21,7 @@ Route::post('/check', [AuthController::class, 'checkConnectionState']);
 
 // Utilisateurs
 Route::prefix('users')
-    // ->middleware('verifyToken')
+    ->middleware('verifyToken')
     ->controller(UserController::class)->group(function () {
         Route::get('/', action: 'getUser'); // Tous les utilisateurs
         Route::get('/{id}', 'getUserById');  // Détail d’un site
@@ -54,6 +55,7 @@ Route::prefix('circuits')
 
 // Reservation
 Route::prefix('reservations')
+    // ->middleware('verifyToken')
     ->controller(ReservationController::class)->group(function () {
         Route::get('/', 'index');                      // Tous les reservations
         Route::get('/{id}', 'showInfo');              // Détail d’un reservation
@@ -65,6 +67,7 @@ Route::prefix('reservations')
 
 // Commentaire
 Route::prefix('commentaires')
+    // ->middleware('verifyToken')
     ->controller(CommentaireController::class)->group(function () {
         Route::get('/', 'index');                      // Tous les commentaire
         Route::get('/{id}', 'showInfo');              // Détail d’un commentaire
@@ -79,13 +82,13 @@ Route::prefix('commentaires')
 
 // Commodites
 Route::prefix('commodites')
+    // ->middleware('verifyToken')
     ->controller(CommodityController::class)->group(function () {
         Route::get('/', 'index');
     });
 
-
-// Hebergements
-Route::prefix('hebergements')
-    ->controller(AccomodationController::class)->group(function () {
+Route::prefix('accomodations')
+    // ->middleware('verifyToken')
+    ->controller(HebergementController::class)->group(function () {
         Route::get('/', 'index');
     });
