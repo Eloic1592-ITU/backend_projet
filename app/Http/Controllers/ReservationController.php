@@ -22,8 +22,17 @@ class ReservationController extends Controller
     public function index(Request $request)
     {
         try {
+            if (!isset($request->id_user))
+                return response()->json([
+                    'message' => 'Identifiant de l\'utilisateur connectés requis',
+                ], 400);
+
             // Construire la requête de base
-            $query = TReservation::query();
+            $query = TReservation::where('est_supprime', operator: false);
+
+            if ($request->id_role != 1 && $request->id_role != 2) {
+                $query->where('id_user_agent', $request->id_user);
+            }
 
             // Filtres
             if ($request->has('date_depart')) {
@@ -31,7 +40,7 @@ class ReservationController extends Controller
             }
 
             if ($request->has('statut_paiement')) {
-                $query->where('statut_paiement', $request->statut_paiement,FILTER_VALIDATE_BOOLEAN);
+                $query->where('statut_paiement', $request->statut_paiement, FILTER_VALIDATE_BOOLEAN);
             }
 
             // 🔍 Filtrer par client
@@ -102,30 +111,30 @@ class ReservationController extends Controller
     public function showInfo($id)
     {
         try {
-        $reservation = ReservationController::getallReservation($id);
-        // Transformer id_site_touristique en tableau d'objets
-        $site = null;
-        if (!empty($reservation->id_site_touristique)) {
-            $site = TSiteTouristique::where('id_site_touristique', $reservation->id_site_touristique)->get();
-        }
+            $reservation = ReservationController::getallReservation($id);
+            // Transformer id_site_touristique en tableau d'objets
+            $site = null;
+            if (!empty($reservation->id_site_touristique)) {
+                $site = TSiteTouristique::where('id_site_touristique', $reservation->id_site_touristique)->get();
+            }
 
-        $circuit = null;
-        if (!empty($reservation->id_circuit_touristique)) {
-            $circuit = TCircuitTouristique::where('id_circuit_touristique', $reservation->id_circuit_touristique)->get();
-        }
+            $circuit = null;
+            if (!empty($reservation->id_circuit_touristique)) {
+                $circuit = TCircuitTouristique::where('id_circuit_touristique', $reservation->id_circuit_touristique)->get();
+            }
 
-        $client = null;
-        if (!empty($reservation->id_client)) {
-            $client = User::where('id_user', $reservation->id_client)->get();
-        }
+            $client = null;
+            if (!empty($reservation->id_client)) {
+                $client = User::where('id_user', $reservation->id_client)->get();
+            }
 
-        // // Remplacer les champs par les objets
-        $reservation["site_touristique"] = $site;
-        $reservation["circuit_touristique"] = $circuit;
-        $reservation["client"] = $client;
+            // // Remplacer les champs par les objets
+            $reservation["site_touristique"] = $site;
+            $reservation["circuit_touristique"] = $circuit;
+            $reservation["client"] = $client;
 
-        // // Supprimer les champs bruts "id_tab_*" si tu veux éviter la redondance
-        unset($reservation->id_client, $reservation->id_site_touristique,$reservation->id_circuit_touristique);
+            // // Supprimer les champs bruts "id_tab_*" si tu veux éviter la redondance
+            unset($reservation->id_client, $reservation->id_site_touristique, $reservation->id_circuit_touristique);
 
             return response()->json([
                 'message' => 'Réservation créée avec succès',
@@ -173,7 +182,7 @@ class ReservationController extends Controller
                 'statut_paiement' => $request->statut_paiement ?? false,
             ]);
 
-        DB::commit(); // ✅ si tout est ok
+            DB::commit(); // ✅ si tout est ok
 
             return response()->json([
                 'message' => 'Réservation créée avec succès',
@@ -224,7 +233,7 @@ class ReservationController extends Controller
             // Mise à jour
             $reservation->update($data);
 
-        DB::commit(); // ✅ si tout est ok
+            DB::commit(); // ✅ si tout est ok
 
             return response()->json([
                 'message' => 'Réservation mise à jour avec succès',
@@ -243,22 +252,25 @@ class ReservationController extends Controller
     {
         try {
             $reservation = ReservationController::getallReservation($id);
-        
-            $request->validate([
+
+            $request->validate(rules: [
                 'status' => 'required|boolean',
+                "montant" => 'required|numeric|min:0'
             ]);
-        
+
             $reservation->update([
                 'statut_paiement' => (bool) $request->status,
+                'montant_paye' => $request->montant,
+                'date_paiement' => Carbon::now(),
             ]);
-        
+
             $textStatus = $request->status ? 'payé' : 'non-payé';
-        
+
             return response()->json([
                 'message' => "Statut de paiement {$textStatus}.",
                 'reservation' => $reservation
             ], 200);
-        
+
         } catch (\Exception $e) {
             return response()->json([
                 'message' => 'Erreur lors de la modification du statut de la réservation.',
@@ -266,9 +278,6 @@ class ReservationController extends Controller
             ], 500);
         }
     }
-
-
-
 
     public function destroy($id)
     {
