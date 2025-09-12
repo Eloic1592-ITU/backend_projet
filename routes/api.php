@@ -8,6 +8,10 @@ use App\Http\Controllers\UrgenceController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CarnetController;
+use App\Http\Controllers\ChecklistController;
+use App\Http\Controllers\NoteController;
+use App\Http\Controllers\RappelController;
 use App\Http\Controllers\TouristAttractionController;
 use App\Http\Controllers\TouristCircuitContoller;
 use App\Http\Controllers\ReservationController;
@@ -99,9 +103,59 @@ Route::prefix('accomodations')
 Route::prefix('urgences')
     ->controller(UrgenceController::class)->group(function () {
         Route::get('/', 'index');                      // Tous les urgences
-        Route::get('/{id}', 'showInfo');              // Détail d’un urgence
+        Route::get('/{id}', 'showInfo');              // Détail d’une urgence
         Route::post('/', 'store');                     // Créer une urgence
         Route::put('/{id}', 'update');                 // Modifier une urgence
 
 
     });
+
+// Mobile : Carnet
+Route::prefix('carnet')
+    ->controller(CarnetController::class)->group(function () {
+        Route::get('/', 'index');                      // Tous les carnets
+        Route::get('/{id}', 'showInfo');             // Détail d’un carnet
+        Route::get('/user/{id_user}','findByIdUser');
+        Route::post('/', 'store');                     // Créer un carnet
+        Route::put('/{id}', 'update');                 // Modifier un carnet
+        Route::delete('/{id}', 'destroy');             // Supprimer un carnet
+
+
+});
+
+// Mobile : Rappel
+Route::prefix('rappel')
+    ->controller(RappelController::class)->group(function () {
+        Route::get('/user/{id}', 'index');            // Tous les rappels
+        Route::get('/{id}', 'showInfo');             // Détail d’un rappel
+        Route::post('/', 'store');                     // Créer un rappel
+        Route::put('/{id}', 'update');                 // Modifier un rappel
+        Route::delete('/{id}', 'destroy');             // Supprimer un rappel
+
+
+});
+
+// Mobile : Note
+Route::prefix('note')
+    ->controller(NoteController::class)->group(function () {
+        Route::get('/user/{id}', 'index');                      // Tous les rappels
+        Route::get('/{id}', 'showInfo');             // Détail d’un rappel
+        Route::post('/', 'store');                     // Créer un rappel
+        Route::put('/{id}', 'update');                 // Modifier un rappel
+        Route::delete('/{id}', 'destroy');             // Supprimer un rappel
+
+
+});
+
+
+// Mobile : Checkliste
+Route::prefix('checklist')
+    ->controller(ChecklistController::class)->group(function () {
+        Route::get('/user/{id}', 'index');                      // Tous les rappels
+        Route::get('/{id}', 'showInfo');             // Détail d’un rappel
+        Route::post('/', 'store');                     // Créer un rappel
+        Route::put('/{id}', 'update');                 // Modifier un rappel
+        Route::delete('/{id}', 'destroy');             // Supprimer un rappel
+
+
+});
