@@ -4,6 +4,7 @@ use App\Http\Controllers\AccomodationController;
 use App\Http\Controllers\CommentaireController;
 use App\Http\Controllers\CommodityController;
 use App\Http\Controllers\HebergementController;
+use App\Http\Controllers\UrgenceController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
@@ -91,4 +92,16 @@ Route::prefix('accomodations')
     // ->middleware('verifyToken')
     ->controller(HebergementController::class)->group(function () {
         Route::get('/', 'index');
+    });
+
+
+// Mobile: Urgences
+Route::prefix('urgences')
+    ->controller(UrgenceController::class)->group(function () {
+        Route::get('/', 'index');                      // Tous les urgences
+        Route::get('/{id}', 'showInfo');              // Détail d’un urgence
+        Route::post('/', 'store');                     // Créer une urgence
+        Route::put('/{id}', 'update');                 // Modifier une urgence
+
+
     });
