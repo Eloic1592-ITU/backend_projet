@@ -345,13 +345,11 @@ class TouristCircuitContoller extends Controller
     }
 
 
-
-
     public function modifyPublicationStatus(Request $request, $id)
     {
         try {
             // Recherche du Circuit si non supprimé et statut de publication actif
-            $circuit = TouristCircuitContoller::getCircuitTouristiqueActiveById($id);
+            $circuit = TCircuitTouristique::findOrFail($id);
 
             $request->validate([
                 'status' => 'boolean',
@@ -372,7 +370,7 @@ class TouristCircuitContoller extends Controller
                 'message' => "Statut du circuit touristique {$textStatus}.",
                 'circuit' => $circuit
             ]);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return response()->json([
                 'message' => 'Erreur lors de la modification du statut de publication.',
                 'errors' => $e->getMessage()
@@ -392,7 +390,7 @@ class TouristCircuitContoller extends Controller
             ]);
 
             return response()->json(['message' => 'Circuit touristique supprimé']);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return response()->json([
                 'message' => 'Erreur lors de la suppression du Circuit touristique',
                 'errors' => $e->getMessage()

@@ -22,8 +22,12 @@ use Illuminate\Database\Eloquent\Model;
  * @property Carbon $date_creation
  * @property Carbon $date_paiement
  * @property bool $statut_paiement
+ * @property bool $est_supprime
+ * @property int|null $id_user_agent
  * 
- * @property TUser $t_user
+ * @property TCircuitTouristique|null $t_circuit_touristique
+ * @property TSiteTouristique|null $t_site_touristique
+ * @property TUser|null $t_user
  *
  * @package App\Models
  */
@@ -43,7 +47,8 @@ class TReservation extends Model
 		'date_creation' => 'datetime',
 		'date_paiement' => 'datetime',
 		'statut_paiement' => 'bool',
-		'est_supprime' => 'bool'
+		'est_supprime' => 'bool',
+		'id_user_agent' => 'int'
 	];
 
 	protected $fillable = [
@@ -56,21 +61,22 @@ class TReservation extends Model
 		'date_creation',
 		'date_paiement',
 		'statut_paiement',
-		'est_supprime'
+		'est_supprime',
+		'id_user_agent'
 	];
+
+	public function t_circuit_touristique()
+	{
+		return $this->belongsTo(TCircuitTouristique::class, 'id_circuit_touristique');
+	}
+
+	public function t_site_touristique()
+	{
+		return $this->belongsTo(TSiteTouristique::class, 'id_site_touristique');
+	}
 
 	public function t_user()
 	{
-		return $this->belongsTo(TUser::class, 'id_client');
-	}
-
-	public function t_site()
-	{
-    return $this->belongsTo(TSiteTouristique::class, 'id_site_touristique', 'id_site_touristique');
-	}
-
-	public function t_circuit()
-	{
-    return $this->belongsTo(TCircuitTouristique::class, 'id_circuit_touristique', 'id_circuit_touristique');
+		return $this->belongsTo(TUser::class, 'id_user_agent');
 	}
 }
