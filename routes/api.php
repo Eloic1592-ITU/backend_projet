@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AccomodationController;
+use App\Http\Controllers\CircuitTypeController;
 use App\Http\Controllers\CommentaireController;
 use App\Http\Controllers\CommodityController;
 use App\Http\Controllers\HebergementController;
@@ -90,5 +91,11 @@ Route::prefix('commodites')
 Route::prefix('accomodations')
     // ->middleware('verifyToken')
     ->controller(HebergementController::class)->group(function () {
+        Route::get('/', 'index');
+    });
+
+Route::prefix('type-circuits')
+    // ->middleware('verifyToken')
+    ->controller(CircuitTypeController::class)->group(function () {
         Route::get('/', 'index');
     });
