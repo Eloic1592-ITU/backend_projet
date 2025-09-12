@@ -20,10 +20,11 @@ use Illuminate\Database\Eloquent\Model;
  * @property int $nombre_adulte
  * @property int $nombre_enfant
  * @property Carbon $date_creation
- * @property Carbon $date_paiement
+ * @property Carbon|null $date_paiement
  * @property bool $statut_paiement
  * @property bool $est_supprime
  * @property int|null $id_user_agent
+ * @property float|null $montant_paye
  * 
  * @property TCircuitTouristique|null $t_circuit_touristique
  * @property TSiteTouristique|null $t_site_touristique
@@ -48,7 +49,8 @@ class TReservation extends Model
 		'date_paiement' => 'datetime',
 		'statut_paiement' => 'bool',
 		'est_supprime' => 'bool',
-		'id_user_agent' => 'int'
+		'id_user_agent' => 'int',
+		'montant_paye' => 'float'
 	];
 
 	protected $fillable = [
@@ -62,7 +64,8 @@ class TReservation extends Model
 		'date_paiement',
 		'statut_paiement',
 		'est_supprime',
-		'id_user_agent'
+		'id_user_agent',
+		'montant_paye'
 	];
 
 	public function t_circuit_touristique()

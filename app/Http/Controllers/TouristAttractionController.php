@@ -22,7 +22,7 @@ class TouristAttractionController extends Controller
                 'message' => 'Identifiant de l\'utilisateur connectés requis',
             ], 400);
 
-        $query = TSiteTouristique::where('est_supprime', false);
+        $query = TSiteTouristique::where('est_supprime', operator: false);
 
         if ($request->id_role != 1 && $request->id_role != 2) {
             $query->where('id_user_modif', $request->id_user);
