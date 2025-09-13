@@ -1,5 +1,5 @@
 # Étape 1 : Builder les dépendances avec Composer
-FROM composer:2 AS build
+FROM php:8.2-fpm
 
 WORKDIR /app
 
