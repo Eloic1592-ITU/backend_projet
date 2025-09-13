@@ -18,16 +18,19 @@ COPY . .
 # Installer les dépendances Laravel
 RUN composer install --no-dev --optimize-autoloader
 
+# Donner les permissions à Laravel
+RUN chown -R www-data:www-data storage bootstrap/cache
+
 # Compiler les caches Laravel
-RUN php artisan config:cache \
-    && php artisan route:cache \
-    && php artisan view:cache
+RUN php artisan config:clear \
+ && php artisan route:clear \
+ && php artisan view:clear \
+ && php artisan config:cache \
+ && php artisan route:cache \
+ && php artisan view:cache
 
 # Exposer le port
 EXPOSE 8000
 
-# Donner les permissions à Laravel
-RUN chown -R www-data:www-data storage bootstrap/cache
-
-# Lancer Laravel avec son serveur intégré
-CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]
+# Lancer Laravel et exécuter les migrations automatiquement
+CMD php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=8000
