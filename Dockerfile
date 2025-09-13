@@ -1,38 +1,28 @@
-# Étape 1 : Builder les dépendances avec Composer
 FROM php:8.2-fpm
 
-WORKDIR /app
-
-COPY composer.json composer.lock ./
-RUN composer install --no-dev --no-scripts --no-interaction --prefer-dist --optimize-autoloader
-
-# Étape 2 : Image finale avec PHP et Nginx
-FROM php:8.2-fpm
-
-# Installer extensions nécessaires à Laravel + PostgreSQL
+# Installer dépendances système et PostgreSQL
 RUN apt-get update && apt-get install -y \
-    libpng-dev libjpeg-dev libfreetype6-dev zip unzip git curl nginx supervisor libpq-dev \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install pdo_pgsql gd bcmath \
-    && rm -rf /var/lib/apt/lists/*
+    nginx \
+    supervisor \
+    git unzip libpq-dev libonig-dev libxml2-dev zip curl \
+    && docker-php-ext-install pdo pdo_pgsql mbstring bcmath exif pcntl \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /var/www/html
+# Copier configs
+COPY ./nginx.conf /etc/nginx/sites-available/default
+COPY ./supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
-# Copier code source
+# Copier le projet Laravel
+WORKDIR /var/www
 COPY . .
 
-# Copier vendor depuis l’étape build
-COPY --from=build /app/vendor ./vendor
+# Installer Composer et dépendances Laravel
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer \
+    && composer install --no-dev --optimize-autoloader
 
-# Config Nginx
-COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
+# Droits sur storage et bootstrap/cache
+RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
 
-# Donner droits à Laravel
-RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
+EXPOSE 80
 
-# Exposer le port
-EXPOSE 8080
-
-# Supervisord lance PHP-FPM + Nginx
-COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-CMD ["supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
+CMD ["/usr/bin/supervisord"]
