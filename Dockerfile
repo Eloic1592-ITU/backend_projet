@@ -26,5 +26,8 @@ RUN php artisan config:cache \
 # Exposer le port
 EXPOSE 8000
 
+# Donner les permissions à Laravel
+RUN chown -R www-data:www-data storage bootstrap/cache
+
 # Lancer Laravel avec son serveur intégré
 CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]
