@@ -8,9 +8,9 @@ RUN apt-get update && apt-get install -y \
     && docker-php-ext-install pdo pdo_pgsql mbstring bcmath exif pcntl \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Copier configs
-COPY ./nginx.conf /etc/nginx/sites-available/default
-COPY ./supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+# Copier configs depuis le dossier docker/
+COPY ./docker/nginx.conf /etc/nginx/sites-available/default
+COPY ./docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 # Copier le projet Laravel
 WORKDIR /var/www
