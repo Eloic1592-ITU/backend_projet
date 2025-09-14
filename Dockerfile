@@ -23,6 +23,6 @@ RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local
 # Droits sur storage et bootstrap/cache
 RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
 
-EXPOSE 80
+EXPOSE 8000
 
 CMD ["/usr/bin/supervisord"]
