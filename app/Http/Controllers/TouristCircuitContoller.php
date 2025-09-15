@@ -29,7 +29,7 @@ class TouristCircuitContoller extends Controller
         $query = TCircuitTouristique::where('est_supprime', false);
 
         // Filtre selon le rôle
-        if (!in_array($request->id_role, [1, 2])) {
+        if ($request->id_role != 1 && $request->id_role != 2) {
             $query->where('id_user_modif', $request->id_user);
         }
 
