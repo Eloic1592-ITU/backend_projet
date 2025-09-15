@@ -7,7 +7,6 @@ use Exception;
 use Illuminate\Http\Request;
 use App\Models\TCircuitTouristique;
 use App\Models\TPhoto;
-use App\PhotoService;
 use App\Models\TSiteTouristique;
 use Illuminate\Support\Facades\DB;
 use App\Models\TTypeCircuit;
@@ -207,12 +206,15 @@ class TouristCircuitContoller extends Controller
             $photoIds = [];
             if ($request->hasFile('photos')) {
                 foreach ($request->file('photos') as $photo) {
-                    $imagePath = $photo->store('photos', 'public');
-                    $imageName = basename($imagePath);
 
+                    if (!$photo instanceof \Illuminate\Http\UploadedFile) {
+                        return response()->json("Format image invalide", 401);
+                    }
+
+                    $imageData = HandleImageUpload::handleImageToInsert($photo);
                     $newPhoto = TPhoto::create([
-                        'nom_photo' => $imageName,
-                        'image_encode' => $imagePath,
+                        'nom_photo' => $imageData["imageName"],
+                        'image_encode' => $imageData["base64Encoded"],
                         'date_dernier_modif' => Carbon::now(),
                     ]);
 
