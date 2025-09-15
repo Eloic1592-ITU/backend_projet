@@ -1,4 +1,4 @@
-FROM php:8.2-fpm
+FROM php:8.2.12-fpm
 
 # Installer dépendances système et PostgreSQL
 RUN apt-get update && apt-get install -y \
