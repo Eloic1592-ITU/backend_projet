@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\TCommodite;
+
+use App\PhotoService;
 use Illuminate\Http\Request;
 use App\Models\TSiteTouristique;
 use App\Models\TPhoto;
@@ -146,12 +148,15 @@ class TouristAttractionController extends Controller
             $photoIds = [];
             if ($request->hasFile(key: 'photos')) {
                 foreach ($request->file('photos') as $photo) {
-                    $imagePath = $photo->store('photos', 'public');
-                    $imageName = basename($imagePath);
 
+                    if (!$photo instanceof \Illuminate\Http\UploadedFile) {
+                        return response()->json("Format image invalide", 401);
+                    }
+
+                    $imageData =  HandleImageUpload::handleImageToInsert($photo);
                     $newPhoto = TPhoto::create([
-                        'nom_photo' => $imageName,
-                        'image_encode' => $imagePath,
+                        'nom_photo' => $imageData["imageName"],
+                        'image_encode' => $imageData["base64Encoded"],
                         'date_dernier_modif' => Carbon::now(),
                     ]);
 

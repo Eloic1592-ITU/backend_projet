@@ -1,22 +1,13 @@
 <?php
 
-namespace App;
+namespace App\Http\Controllers;
 
-use App\Models\TPhoto;
-use DB;
 use Exception;
+use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 
-class PhotoService
+class HandleImageUpload extends Controller
 {
-    /**
-     * Create a new class instance.
-     */
-    public function __construct()
-    {
-        //
-    }
-
     public static function handleImageToInsert(UploadedFile $photo)
     {
         try {
@@ -34,8 +25,4 @@ class PhotoService
             throw $e;
         }
     }
-
-    // public static function bulkCreatePhoto()
-    // {
-    // }
 }
