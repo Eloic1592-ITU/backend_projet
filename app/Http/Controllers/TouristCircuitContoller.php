@@ -19,6 +19,7 @@ class TouristCircuitContoller extends Controller
 {
     public function index(Request $request)
     {
+        Log::info($request->all());
         // Vérification de l'ID utilisateur
         if (!$request->has('id_user')) {
             return response()->json([
@@ -28,10 +29,10 @@ class TouristCircuitContoller extends Controller
 
         $query = TCircuitTouristique::where('est_supprime', false);
 
-        // Filtre selon le rôle
-        if ($request->id_role != 1 && $request->id_role != 2) {
-            $query->where('id_user_modif', $request->id_user);
-        }
+        // // Filtre selon le rôle
+        // if ($request->id_role != 1 && $request->id_role != 2) {
+        //     $query->where('id_user_modif', $request->id_user);
+        // }
 
         // Filtre par titre
         if ($request->filled('titre_site')) {
